@@ -96,6 +96,11 @@ $np->add_arg (
 	help => _gt('List of critical backend, if set other backend are only warning backend'),
 	required => 0,
 );
+$np->add_arg (
+	spec => 'ignore-backends|i=s',
+	help => _gt('List of backends that won\'t be checked'),
+	required => 0,
+);
 
 
 $np->getopts;
@@ -108,6 +113,11 @@ my $crit_backends = $np->opts->get('critical-backends');
 my @crit_backends_list;
 if ( defined ( $crit_backends ) ) {
 	@crit_backends_list = split(',',$crit_backends);
+}
+my $ignore_backends = $np->opts->get('ignore-backends');
+my @ignore_backends_list;
+if ( defined ( $ignore_backends ) ) {
+	@ignore_backends_list = split(',',$ignore_backends);
 }
 
 # Thresholds :
@@ -239,6 +249,7 @@ if ( $status == OK && $stats ne "") {
 #	print Dumper(\%stats);
 	my %stats2 = ();
 	my $okMsg = '';
+	OUTER:
 	foreach my $pxname ( keys(%stats) ) {
 		$stats2{$pxname} = {
 			'act' => 0,
@@ -248,6 +259,13 @@ if ( $status == OK && $stats ne "") {
 			'scur' => 0,
 			'slim' => 0,
 			};
+		if ( defined($ignore_backends) ) {
+			foreach my $ign ( @ignore_backends_list ) {
+				if ( $pxname =~ /^$ign$/ ) {
+					next OUTER;
+				}
+			}
+		}
 		foreach my $svname ( keys(%{$stats{$pxname}}) ) {
 			if ( $stats{$pxname}{$svname}{'type'} eq '2' ) {
 				my $svstatus = $stats{$pxname}{$svname}{'status'} eq 'UP';
